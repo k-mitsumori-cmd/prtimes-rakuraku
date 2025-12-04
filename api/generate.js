@@ -1,17 +1,4 @@
-import express from 'express';
-import cors from 'cors';
 import OpenAI from 'openai';
-
-const app = express();
-
-// CORS設定
-app.use(cors());
-app.use(express.json());
-
-// OpenAIクライアントの初期化
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
 
 // キーワード抽出関数
 function extractKeywords(text) {
@@ -36,7 +23,7 @@ const PURPOSE_LABELS = {
     'other': 'その他'
 };
 
-// 記事生成API
+// Vercelサーバーレス関数
 export default async function handler(req, res) {
     // CORS設定
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -59,6 +46,13 @@ export default async function handler(req, res) {
         if (!title || !purpose || !companyName || !content) {
             return res.status(400).json({ 
                 error: 'タイトル、目的、会社名、内容は必須です' 
+            });
+        }
+
+        // OpenAI APIキーの確認
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(500).json({ 
+                error: 'OpenAI APIキーが設定されていません' 
             });
         }
 
@@ -95,6 +89,11 @@ ${content}
 - 文字数は800-1200文字程度
 
 プレスリリース記事を作成してください：`;
+
+        // OpenAIクライアントの初期化
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
 
         // OpenAI APIを呼び出し
         const completion = await openai.chat.completions.create({
@@ -137,4 +136,3 @@ ${content}
         });
     }
 }
-
