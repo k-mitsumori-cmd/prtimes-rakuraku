@@ -109,13 +109,33 @@
                 </form>
 
                 <div id="loading" class="loading" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>記事を生成中...</p>
+                    <div class="progress-container">
+                        <svg class="progress-ring" width="120" height="120">
+                            <circle class="progress-ring-circle-bg" cx="60" cy="60" r="54" fill="transparent" stroke="#e0e0e0" stroke-width="8"/>
+                            <circle class="progress-ring-circle" cx="60" cy="60" r="54" fill="transparent" stroke="#1e3a8a" stroke-width="8" stroke-linecap="round"/>
+                        </svg>
+                        <div class="progress-text">
+                            <span class="progress-percent">0</span>%
+                        </div>
+                    </div>
+                    <p class="loading-message">記事を生成中...</p>
                 </div>
             </div>
 
             <!-- 記事プレビュー -->
-            <div id="preview-section" class="card" style="display: none;">
+            <div id="preview-section" class="card" style="display: none; position: relative;">
+                <div id="preview-loading" class="preview-loading">
+                    <div class="progress-container">
+                        <svg class="progress-ring" width="120" height="120">
+                            <circle class="progress-ring-circle-bg" cx="60" cy="60" r="54" fill="transparent" stroke="#e0e0e0" stroke-width="8"/>
+                            <circle class="progress-ring-circle" cx="60" cy="60" r="54" fill="transparent" stroke="#1e3a8a" stroke-width="8" stroke-linecap="round"/>
+                        </svg>
+                        <div class="progress-text">
+                            <span class="progress-percent">0</span>%
+                        </div>
+                    </div>
+                    <p class="loading-message">現在再生成しています...</p>
+                </div>
                 <div class="preview-header">
                     <h2>生成された記事</h2>
                     <div class="preview-actions">

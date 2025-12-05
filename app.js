@@ -44,6 +44,7 @@ const contentLength = document.getElementById('content-length');
 const purposeHint = document.getElementById('purpose-hint');
 const generateBtn = document.getElementById('generate-btn');
 const loadingDiv = document.getElementById('loading');
+const previewLoadingDiv = document.getElementById('preview-loading');
 const regenerateBtn = document.getElementById('regenerate-btn');
 const copyBtn = document.getElementById('copy-btn');
 const resetBtn = document.getElementById('reset-btn');
@@ -81,8 +82,63 @@ trySampleBtn.addEventListener('click', () => {
     titleInput.focus();
 });
 
+// プログレスバーを初期化する関数
+function initializeProgress(isRegenerating = false) {
+    const progressCircle = document.querySelector(isRegenerating 
+        ? '#preview-loading .progress-ring-circle' 
+        : '#loading .progress-ring-circle');
+    
+    if (progressCircle) {
+        const circumference = 2 * Math.PI * 54; // 半径54
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference;
+    }
+}
+
+// プログレスバーを更新する関数
+function updateProgress(percent, isRegenerating = false) {
+    const progressCircle = document.querySelector(isRegenerating 
+        ? '#preview-loading .progress-ring-circle' 
+        : '#loading .progress-ring-circle');
+    const progressPercent = document.querySelector(isRegenerating 
+        ? '#preview-loading .progress-percent' 
+        : '#loading .progress-percent');
+    
+    if (progressCircle && progressPercent) {
+        const circumference = 2 * Math.PI * 54; // 半径54
+        const offset = circumference - (percent / 100) * circumference;
+        progressCircle.style.strokeDashoffset = offset;
+        progressPercent.textContent = Math.min(Math.floor(percent), 100);
+    }
+}
+
+// プログレスアニメーションを開始
+function startProgressAnimation(isRegenerating = false) {
+    // 初期化
+    initializeProgress(isRegenerating);
+    updateProgress(0, isRegenerating);
+    
+    let progress = 0;
+    const targetProgress = 95; // 95%まで進める（実際の完了は100%に）
+    const duration = 25000; // 25秒で95%まで（より自然な速度）
+    const interval = 50; // 50msごとに更新
+    const increment = (targetProgress / duration) * interval;
+    
+    const progressInterval = setInterval(() => {
+        progress += increment;
+        if (progress < targetProgress) {
+            updateProgress(progress, isRegenerating);
+        } else {
+            updateProgress(targetProgress, isRegenerating);
+            clearInterval(progressInterval);
+        }
+    }, interval);
+    
+    return progressInterval;
+}
+
 // 記事生成（共通関数）
-async function generateArticleFromForm(variation = 0) {
+async function generateArticleFromForm(variation = 0, isRegenerating = false) {
     const formData = {
         title: titleInput.value.trim(),
         purpose: purposeSelect.value,
@@ -97,17 +153,49 @@ async function generateArticleFromForm(variation = 0) {
     }
     
     // ローディング表示
-    generateBtn.disabled = true;
-    if (regenerateBtn) regenerateBtn.disabled = true;
-    loadingDiv.style.display = 'block';
+    let progressInterval;
+    if (isRegenerating) {
+        // 再生成時はプレビューセクションにローディングを表示
+        if (previewLoadingDiv) {
+            previewLoadingDiv.classList.add('active');
+            // 少し待ってからアニメーション開始（表示が確実にされるように）
+            setTimeout(() => {
+                progressInterval = startProgressAnimation(true);
+            }, 100);
+        }
+        if (regenerateBtn) {
+            regenerateBtn.disabled = true;
+            regenerateBtn.textContent = '🔄 再生成中...';
+        }
+    } else {
+        // 初回生成時はフォーム下にローディングを表示
+        generateBtn.disabled = true;
+        generateBtn.textContent = '✨ 生成中...';
+        if (regenerateBtn) regenerateBtn.disabled = true;
+        if (loadingDiv) {
+            loadingDiv.style.display = 'block';
+            // 少し待ってからアニメーション開始
+            setTimeout(() => {
+                progressInterval = startProgressAnimation(false);
+            }, 100);
+        }
+    }
     
     try {
         // バックエンドAPIを使用（常にAI生成）
         let article;
         try {
             article = await generateArticleWithAI(formData, variation);
+            // 完了時に100%に設定
+            if (progressInterval) clearInterval(progressInterval);
+            updateProgress(100, isRegenerating);
+            // 完了アニメーションを少し表示
+            await new Promise(resolve => setTimeout(resolve, 500));
         } catch (apiError) {
             console.warn('バックエンドAPIエラー、テンプレートベースにフォールバック:', apiError);
+            if (progressInterval) clearInterval(progressInterval);
+            updateProgress(100, isRegenerating);
+            await new Promise(resolve => setTimeout(resolve, 500));
             // バックエンドが利用できない場合はテンプレートベースにフォールバック
             article = generateArticle(formData, variation);
         }
@@ -117,10 +205,13 @@ async function generateArticleFromForm(variation = 0) {
         // フォームデータを保存（再生成用）
         window.lastFormData = formData;
         
-        // プレビューセクションにスクロール
-        previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!isRegenerating) {
+            // プレビューセクションにスクロール
+            previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     } catch (error) {
         console.error('記事生成エラー:', error);
+        if (progressInterval) clearInterval(progressInterval);
         alert('記事の生成に失敗しました。APIキーが正しいか確認してください。\n\nエラー: ' + error.message);
         
         // エラー時はテンプレートベースにフォールバック
@@ -128,9 +219,20 @@ async function generateArticleFromForm(variation = 0) {
         displayArticle(article);
     } finally {
         // ローディング非表示
-        loadingDiv.style.display = 'none';
-        generateBtn.disabled = false;
-        if (regenerateBtn) regenerateBtn.disabled = false;
+        if (isRegenerating) {
+            if (previewLoadingDiv) {
+                previewLoadingDiv.classList.remove('active');
+            }
+            if (regenerateBtn) {
+                regenerateBtn.disabled = false;
+                regenerateBtn.textContent = '🔄 再生成';
+            }
+        } else {
+            if (loadingDiv) loadingDiv.style.display = 'none';
+            generateBtn.disabled = false;
+            generateBtn.textContent = '✨ 記事を生成する';
+            if (regenerateBtn) regenerateBtn.disabled = false;
+        }
     }
 }
 
@@ -175,14 +277,31 @@ articleForm.addEventListener('submit', async (e) => {
 
 // 再生成ボタン
 if (regenerateBtn) {
-    regenerateBtn.addEventListener('click', () => {
+    regenerateBtn.addEventListener('click', async () => {
+        // ボタンを無効化して即座にローディング表示
+        regenerateBtn.disabled = true;
+        regenerateBtn.textContent = '🔄 再生成中...';
+        
+        // プレビューセクションが表示されていることを確認
+        if (previewSection && previewSection.style.display === 'none') {
+            previewSection.style.display = 'block';
+        }
+        
+        // ローディングを即座に表示
+        if (previewLoadingDiv) {
+            previewLoadingDiv.classList.add('active');
+        }
+        
+        // 少し待ってから生成開始（ローディング表示を確実に）
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         if (window.lastFormData) {
             // バリエーションを変えて再生成（1-3のランダム）
             const variation = Math.floor(Math.random() * 3) + 1;
-            generateArticleFromForm(variation);
+            generateArticleFromForm(variation, true); // 再生成フラグをtrueに
         } else {
             // フォームから再生成
-            generateArticleFromForm(Math.floor(Math.random() * 3) + 1);
+            generateArticleFromForm(Math.floor(Math.random() * 3) + 1, true); // 再生成フラグをtrueに
         }
     });
 }
@@ -593,6 +712,12 @@ resetBtn.addEventListener('click', () => {
 });
 
 // バックエンドサーバーの接続確認
+// ページ読み込み時にプログレスバーを初期化
+window.addEventListener('DOMContentLoaded', () => {
+    initializeProgress(false);
+    initializeProgress(true);
+});
+
 window.addEventListener('load', async () => {
     try {
         const response = await fetch('http://localhost:3000/health');

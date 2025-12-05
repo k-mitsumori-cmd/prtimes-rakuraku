@@ -191,25 +191,100 @@ body {
 /* ローディング */
 .loading {
     text-align: center;
-    padding: 32px;
+    padding: 48px 32px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    margin: 24px 0;
 }
 
-.spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--prtimes-gray);
-    border-top-color: var(--prtimes-blue);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 16px;
+.progress-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 24px;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+.progress-ring {
+    transform: rotate(-90deg);
 }
 
-.loading p {
+.progress-ring-circle {
+    stroke-dasharray: 339.292;
+    stroke-dashoffset: 339.292;
+    transition: stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: progress-pulse 2s ease-in-out infinite;
+}
+
+.progress-ring-circle-bg {
+    opacity: 0.2;
+}
+
+@keyframes progress-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--prtimes-blue);
+}
+
+.progress-percent {
+    font-size: 32px;
+}
+
+.loading-message {
     color: var(--text-secondary);
+    font-size: 16px;
+    margin-top: 8px;
+    animation: loading-fade 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-fade {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* 再生成時のローディング */
+.preview-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.95);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 12px;
+}
+
+.preview-loading.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-loading .progress-container {
+    margin-bottom: 16px;
+}
+
+.preview-loading .loading-message {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--prtimes-blue);
 }
 
 /* プレビュー */
